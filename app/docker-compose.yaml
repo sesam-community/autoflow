@@ -1,0 +1,46 @@
+version: '3.7'
+
+services:
+
+    # Proxies requests to internal services
+    reverse-proxy:
+      image: nginx:1.17.10
+      container_name: reverse_proxy_demo
+      depends_on:
+          - frontend_autoflow
+          - backend_autoflow
+      volumes:
+        - ./reverse_proxy/nginx.conf:/etc/nginx/nginx.conf
+      ports:
+        - 80:80
+
+    frontend_autoflow:
+      stdin_open: true
+      tty: true
+      image: jc89als/frontend_autoflow
+      build: 
+        context: ./frontend/
+      depends_on:
+        - backend_autoflow
+      volumes:
+        - ~/.composer-docker/cache:/root/.composer/cache:delegated
+        - ./:/usr/src/app:cached
+        - '/app/node_modules'
+        - '/app/src'
+      ports:
+        - 8080:80
+      working_dir: /app
+
+    backend_autoflow:
+      image: jc89als/backend_autoflow
+      build: 
+        context: ./backend/
+      volumes:
+        - '/app'
+      environment:
+        - sesam_jwt=<sesam_jwt_token goes here>
+        - sesam_base_url=<sesam_base_url goes here>
+      ports:
+        - 5000:5000
+      working_dir: /app
+      command: "python3 service.py"
