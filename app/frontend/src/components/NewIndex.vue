@@ -5,8 +5,8 @@
         <h3>Pipes currently in SESAM</h3>
         <br />
         <br />
-        <div class="checkboxes">
-        <li class="list" v-for="(pipe, index) in scan_pipes" :key="index">
+        <div class="checkboxes_idx">
+        <li class="list_idx" v-for="(pipe, index) in scan_pipes" :key="index">
             <input
             :id="pipe"
             :value="pipe"
@@ -46,13 +46,13 @@
     <div v-if="isBufferActive" name="buffer" class="split right">
         <span v-html="bufferIcon()"></span>
     </div>
-    <div v-if="is404" class="center">
-        <span> {{rows}} </span>
+    <div v-if="is404" class="center_idx">
+        <span> {{scan_pipes}} </span>
     </div>
-    <div v-if="isGlobalBufferActive" class="center" id="Buffer">
+    <div v-if="isGlobalBufferActive" class="center_idx" id="Buffer">
       <span v-html="bufferIcon()"></span>
     </div>
-    <div v-if="isSesamResponse" class="sesam" id="sesamResponse">
+    <div v-if="isSesamResponse" class="center_idx" id="sesamResponse">
       <br />
       <br />
       <h2>{{ result["sesam_result"] }}</h2>
@@ -108,7 +108,6 @@ export default {
   methods: {
     mergeIntoGlobals() {
       this.isMergeOfGlobals = true;
-      this.isConectionNotMade = false;
       this.isConnectionMade = false;
     },  
     bufferIcon() {
@@ -138,6 +137,11 @@ export default {
             this.is404 = true;
             data = null;
           }
+          if (data["result"][0] == "It seems like your Sesam instance is empty"){
+            this.scan_pipes = "It seems like your Sesam instance is empty. Get some pipes in there and hurry back!";
+            this.is404 = true;
+            data = null;
+          }
           if (data != null && data != "") {
             this.scan_pipes = data["result"];
             this.isConnectionMade = true;
@@ -149,18 +153,6 @@ export default {
 </script>
   
 <style>
-select {
-  padding: 10%;
-  width: 30%;
-  height: 40px;
-  padding: 5px 10px;
-  font-size: 12px;
-  color: rgba(0, 0, 0);
-  letter-spacing: 1px;
-  background: #fff;
-  border: 2px solid #fff;
-}
-
 input {
   padding: 10%;
   text-align: center;
@@ -191,34 +183,12 @@ input {
   transition: all 0.1s ease-in-out;
 }
 
-.center {
+.center_idx {
   padding: 10%;
-}
-
-.sesam {
-  padding: 10%;
-}
-
-.checkbox_option {
-  text-align: center;
-  width: 5%;
-  background: #fff;
-}
-
-.checkbox_select_all {
-  width: 5%;
-  background: #fff;
-  vertical-align: middle;
 }
 
 .list_select_all {
   text-align: center;
-}
-
-li {
-  font-size: 12px;
-  text-align: left;
-  display: block;
 }
 
 .component {
@@ -226,14 +196,15 @@ li {
   text-align: center;
 }
 
-.checkboxes {
-  height: 300px;
+.checkboxes_idx {
+  height: auto;
+  max-height: 600px;
   overflow-y: scroll;
 }
-.checkboxes input {
+.checkboxes_idx input {
   vertical-align: middle;
 }
-.checkboxes label span {
+.checkboxes_idx label span {
   vertical-align: middle;
 }
 
@@ -255,17 +226,6 @@ li {
   padding-top: 20px;
 }
 
-.checkboxes {
-  height: 450px;
-  overflow-y: scroll;
-}
-.checkboxes input {
-  vertical-align: middle;
-}
-.checkboxes label span {
-  vertical-align: middle;
-}
-
 .checkbox_option {
   text-align: center;
   width: 5%;
@@ -284,7 +244,7 @@ li {
   display: block;
 }
 
-.list {
+.list_idx {
   font-size: 12px;
   text-align: left;
   display: block;

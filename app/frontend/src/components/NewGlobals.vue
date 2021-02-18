@@ -169,20 +169,19 @@ $fourth-global: #b9004d;
   box-sizing: border-box;
 }
 
-a {
-  font-size: 14px;
-}
-
-p {
-  font-size: 14px;
-}
-
 .center {
   padding: 10%;
 }
 
-.modelling {
-  padding: 10%;
+ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+
+li {
+  text-align: center;
+  display: block;
 }
 
 .input_globals {
@@ -198,7 +197,7 @@ p {
 }
 
 button {
-  width: 20%;
+  width: 15%;
   margin: 5px;
   padding: 5px 10px;
   font-size: 12px;
@@ -216,8 +215,8 @@ button {
 }
 
 .drag-container {
-  display: table;   /* Allow the centering to work */
-	margin: 0 auto;
+  max-width: 1000px;
+  margin: 20px auto;
 }
 
 .drag-list {
@@ -236,6 +235,7 @@ button {
   margin: 0 10px;
   height: 600px;
   position: relative;
+  //background: rgba(black, 0.2);
   overflow: hidden;
 
   @media (max-width: 690px) {

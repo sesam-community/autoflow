@@ -33,6 +33,7 @@ def create_global(global_name, selected_pipes, sesam_jwt, sesam_base_url):
         'Authorization': f'Bearer {sesam_jwt}',
         "content-type": "application/json"
     }
+
     global_pipe = {
         "_id": f"{global_name}",
         "type": "pipe",
@@ -50,28 +51,42 @@ def create_global(global_name, selected_pipes, sesam_jwt, sesam_base_url):
     }
 
     sesam_response = requests.post(f"{sesam_base_url}/pipes",
-                                   headers=header,
-                                   data=json.dumps([global_pipe]),
-                                   verify=False)
+                                headers=header,
+                                data=json.dumps([global_pipe]),
+                                verify=False)
+    
     if not sesam_response.ok:
         response = json.loads(sesam_response.content.decode('utf-8-sig'))
-        if response['detail'] == f"The pipe '{global_name}' already exists!":
-            print(f'Trying to update config of {global_name}...')
-            sesam_second_response = requests.put(f"{sesam_base_url}/pipes/{global_name}/config",
-                                   headers=header,
-                                   data=json.dumps(global_pipe),
-                                   verify=False)
-            if not sesam_second_response.ok:
-                print(sesam_second_response.content)
-            
-            else:
-                print(f"Pipe '{global_pipe['_id']}' has been updated")
-                return_msg = "Global updated"
-    
+        
     else:
         print(f"Pipe '{global_pipe['_id']}' has been created")
         return_msg = "Global created"
 
+    return return_msg
+
+def update_global(global_pipe, selected_pipes, sesam_jwt, sesam_base_url):
+    return_msg = None
+    header = {
+        'Authorization': f'Bearer {sesam_jwt}',
+        "content-type": "application/json"
+    }
+        
+    global_pipe['source']['datasets'] = selected_pipes
+    print(f"Trying to update config of {global_pipe['_id']}...")
+    
+    sesam_second_response = requests.put(f"{sesam_base_url}/pipes/{global_pipe['_id']}/config",
+                            headers=header,
+                            data=json.dumps(global_pipe),
+                            verify=False)
+    
+    if not sesam_second_response.ok:
+        print(sesam_second_response.content)
+        return_msg = "Global could not be updated"
+    
+    else:
+        print(f"Pipe '{global_pipe['_id']}' has been updated")
+        return_msg = "Global updated"
+    
     return return_msg
 
 def get_all_pipes(sesam_jwt, sesam_base_url):
@@ -114,4 +129,4 @@ def get_global_pipe_config(global_pipe, sesam_jwt, sesam_base_url):
         for element in datasets:
             pipes_in_global.append(element.split(' ')[0])
 
-    return pipes_in_global
+    return pipes_in_global, json_config
