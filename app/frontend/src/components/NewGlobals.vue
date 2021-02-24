@@ -31,7 +31,7 @@
               v-model="group.items"
               :groups="groups"
               :data-id="group.id"
-              @change="onGroupsChange"
+              @change="onGroupsChange(group)"
             >
               <ul class="drag-inner-list" :data-id="group.id">
                 <li
@@ -45,6 +45,7 @@
               </ul>
             </vue-draggable-group>
           </li>
+          <button class="global_add" v-on:click.prevent="addGlobal(groups)">Add Global</button>
         </ul>
       </div>
       <button v-on:click.prevent="createGlobals">Merge into Globals</button>
@@ -110,11 +111,20 @@ export default {
         }
       });
     },
+    addGlobal(current_groups) {
+      //eslint-disable-next-line no-console
+      console.log(current_groups.length+1);
+      this.groups.push({
+          'id': current_groups.length+1,
+          'name': "New Global",
+          'items': [],
+        },)
+    },
     async createGlobals() {
       let globalGroups = this.groups;
       this.preSelection = false;
       this.isBufferActive = true;
-      await fetch("http://localhost:5000/create_globals", {
+      await fetch("http://localhost:5000/globals", {
         method: "POST",
         headers: {
           Accept: "application/json",
@@ -139,15 +149,12 @@ export default {
         }
       });
     },
-    onGroupsChange(e) {
+    onGroupsChange(element_at_idx_null) {
       //eslint-disable-next-line no-console
-      console.log({ e });
-      //eslint-disable-next-line no-console
-      console.log(this.groups[2].name);
-      if (this.groups[2].items.length == 1) {
-        //eslint-disable-next-line no-console
-        console.log(this.groups[2].items[0].name);
-      }
+      //console.log({ element_at_idx_null });
+      let root_idx = element_at_idx_null.id - 1;
+      let placeholder_name = "global-"+element_at_idx_null.items[0].name.split('-')[1]
+      this.groups[root_idx].name = placeholder_name;
     
     },
     onGlobalNameChange(e) {
@@ -194,6 +201,24 @@ li {
   letter-spacing: 1px;
   background: #fff;
   border: 2px solid #fff;
+}
+
+.global_add {
+  width: 15%;
+  margin: 5px;
+  padding: 5px 10px;
+  font-size: 12px;
+  letter-spacing: 1px;
+  background: rgb(61, 57, 53);
+  height: 40px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #fff;
+  -webkit-transition: all 0.1s ease-in-out;
+  -moz-transition: all 0.1s ease-in-out;
+  -ms-transition: all 0.1s ease-in-out;
+  -o-transition: all 0.1s ease-in-out;
+  transition: all 0.1s ease-in-out;
 }
 
 button {

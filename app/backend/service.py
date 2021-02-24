@@ -5,6 +5,7 @@ import logging
 import os
 import sys
 from datahubs.sesam import get_all_input_pipes, create_global, update_global, get_all_pipes, get_global_pipe_config
+from statics.global_list import global_group_list
 from flask_cors import CORS, cross_origin
 from sesamutils import VariablesConfig, sesam_logger
 import urllib3
@@ -42,6 +43,7 @@ optional_env_vars = ["Denmark_is_here"]
 sesam_jwt = os.getenv('sesam_jwt')
 base_url = os.getenv('sesam_base_url')
 
+
 @app.route('/')
 def index():
     output = {
@@ -51,28 +53,6 @@ def index():
     return jsonify(output)
 
 
-## Get all input pipes from SESAM to display in frontend for merging of globals.
-@app.route('/get_pipes', methods=['POST'])
-@cross_origin()
-def get_pipes():
-    return_object = []
-    global datahub_config_and_tables
-    global sesam_response
-    connectors = request.json
-    datahub_config_and_tables = connectors
-    pipes_in_sesam = get_all_input_pipes(
-        datahub_config_and_tables['sesamJWT'],
-        datahub_config_and_tables['sesamBaseURL'])
-
-    index_value = 1
-    for pipe in pipes_in_sesam:
-        return_object.append({"id": index_value, "name": pipe, "groupId": 1})
-        index_value = index_value + 1
-
-    sesam_response = {"result": return_object}
-    return {"pipes": pipes_in_sesam}
-
-    
 ## Get all pipes from SESAM to display in frontend.
 @app.route('/get_all_pipes', methods=['POST'])
 @cross_origin()
@@ -106,33 +86,7 @@ def global_list():
     connectors = request.json
     pipes_to_use_for_globals = connectors['pipes']
 
-    global_groups = [
-        {
-          'id': 1,
-          'name': "Default List",
-          'items': [],
-        },
-        {
-          'id': 2,
-          'name': "First Global",
-          'items': [],
-        },
-        {
-          'id': 3,
-          'name': "Second Global",
-          'items': [],
-        },
-        {
-          'id': 4,
-          'name': "Third Global",
-          'items': [],
-        },
-        {
-          'id': 5,
-          'name': "Fourth Global",
-          'items': [],
-        }
-    ]
+    global_groups = global_group_list()
 
     index_value = 1
     group_count = 2
@@ -163,16 +117,24 @@ def global_list():
         tmp_pipes_in_globals = []
 
     global_groups[0]['items'].extend(return_object)
-    response_object = global_groups
+    total_length_of_list = len(global_groups)
     
+    count = 1
+    for group in global_groups:
+        if "global" in group['name']:
+            count = count +1
+        if "global" not in group['name'] and "Default List" != group['name']:
+            del global_groups[count+2:total_length_of_list]
+
+    response_object = global_groups
     tmp_globals = []
 
     sesam_response = {"result": response_object}
     return {"pipes": pipes_to_use_for_globals}
 
 
-## Create or update globals from excisting SESAM integration
-@app.route('/create_globals', methods=['POST'])
+## Create or update globals from existing SESAM integration
+@app.route('/globals', methods=['POST'])
 @cross_origin()
 def get_globals():
     sesam_global_response = None
@@ -195,7 +157,11 @@ def get_globals():
     global_names_used = []
     datasets_used = []
     index = 1
+    mapping_list_of_globals = []
+    for pipe in global_pipes_config:
+        mapping_list_of_globals.append(pipe['_id'])
 
+    ## Updating an existing global
     if len(global_pipes_config) > 0:
         for element in selected_globals:
             for pipe_config in global_pipes_config:
@@ -204,12 +170,14 @@ def get_globals():
                     for pipe, dataset in zip_longest(element['items'], pipe_config['source']['datasets']):
                         if pipe == None:
                             pass
+                        if pipe == None and dataset != None:
+                            pipe = {'name': 'Denmark'}
                         if dataset != None and pipe['name'] == dataset.split(' ')[0]:
                             datasets_used.append(pipe['name'])
                             pipe_names.append(dataset)
                             index = index + 1
                         else:
-                            if pipe['name'] not in datasets_used:
+                            if pipe['name'] not in datasets_used and pipe['name'] != 'Denmark':
                                 pipe_names.append(f"{pipe['name']} pip{index}")
                                 index = index + 1
                     update_global(pipe_config, pipe_names, sesam_jwt, base_url)
@@ -217,25 +185,27 @@ def get_globals():
                     index = 1
 
                 else:
-                    ## This logic is still not working optimally. When updating globals, some are still sent here from the for loops.
-                    if element['name'] not in global_names_used:
+                    if element['name'] not in global_names_used and element['name'] not in mapping_list_of_globals:
                         global_name = element['name']
+                        global_names_used.append(global_name)
                         for pipe in element['items']:
                             pipe_names.append(f"{pipe['name']} pip{index}")
                             index = index + 1
                         create_global(global_name, pipe_names, sesam_jwt, base_url)
                         pipe_names = []
                         index = 1
-        
+
+    ## Creating a new global   
     else:
         for element in selected_globals:
             global_name = element['name']
-            for pipe in element['items']:
-                pipe_names.append(f"{pipe['name']} pip{index}")
-                index = index + 1
-            create_global(global_name, pipe_names, sesam_jwt, base_url)
-            pipe_names = []
-            index = 1
+            if global_name not in global_names_used:
+                for pipe in element['items']:
+                    pipe_names.append(f"{pipe['name']} pip{index}")
+                    index = index + 1
+                create_global(global_name, pipe_names, sesam_jwt, base_url)
+                pipe_names = []
+                index = 1
     
     global_pipes_config = []
 

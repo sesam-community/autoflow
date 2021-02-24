@@ -57,6 +57,7 @@ def create_global(global_name, selected_pipes, sesam_jwt, sesam_base_url):
     
     if not sesam_response.ok:
         response = json.loads(sesam_response.content.decode('utf-8-sig'))
+        print(response)
         
     else:
         print(f"Pipe '{global_pipe['_id']}' has been created")
