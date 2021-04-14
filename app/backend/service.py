@@ -4,7 +4,7 @@ import requests
 import logging
 import os
 import sys
-from datahubs.sesam import get_all_input_pipes, create_global, update_global, get_all_pipes, get_global_pipe_config
+from datahubs.sesam import get_all_input_pipes, create_global_with_equality, update_global_with_equality, create_global, update_global, get_all_pipes, get_global_pipe_config
 from statics.global_list import global_group_list
 from flask_cors import CORS, cross_origin
 from sesamutils import VariablesConfig, sesam_logger
@@ -85,6 +85,7 @@ def global_list():
     global global_pipes_config
     connectors = request.json
     pipes_to_use_for_globals = connectors['pipes']
+    list_of_global_pipes_with_equalities = []
 
     global_groups = global_group_list()
 
@@ -97,6 +98,8 @@ def global_list():
         if "global" in pipe and pipe not in tmp_globals:
             tmp_globals.append(pipe)
             pipes_in_global, global_config = get_global_pipe_config(pipe, sesam_jwt, base_url)
+            if len(global_config['source']['equality']) != 0:
+                list_of_global_pipes_with_equalities.append(global_config)
             global_pipes_config.append(global_config)
             tmp_pipes_in_globals.extend(pipes_in_global)
             if global_groups[element_count].get('id') == group_count:
@@ -129,7 +132,7 @@ def global_list():
     response_object = global_groups
     tmp_globals = []
 
-    sesam_response = {"result": response_object}
+    sesam_response = {"result": response_object, "pipe_configs_with_equalities": list_of_global_pipes_with_equalities}
     return {"pipes": pipes_to_use_for_globals}
 
 
@@ -143,69 +146,97 @@ def get_globals():
     connectors = request.json
     global_selection = connectors
 
-    selected_globals = []
-    for element in global_selection['globalGroups']:
-        for key, value in element.items():
-            if key == "name":
-                if "global-" not in value:
-                    pass
-                else:
-                    selected_globals.append(element)
+    if global_selection['isEquality'] == True:
+        global_names_used = []
+        mapping_list_of_globals = []
+        for pipe in global_pipes_config:
+            mapping_list_of_globals.append(pipe['_id'])
 
-    global_name = None
-    pipe_names = []
-    global_names_used = []
-    datasets_used = []
-    index = 1
-    mapping_list_of_globals = []
-    for pipe in global_pipes_config:
-        mapping_list_of_globals.append(pipe['_id'])
+        ## Updating an existing global
+        if len(global_pipes_config) > 0:
+            for element in global_selection['globalGroups']:
+                for pipe_config in global_pipes_config:
+                    if element['config']['_id'] == pipe_config['_id'] and element['config']['_id'] not in global_names_used:
+                        global_names_used.append(element['config']['_id'])
+                        pipe_config['source']['datasets'] = element['config']['source']['datasets']
+                        pipe_config['source']['equality'] = element['config']['source']['equality']
+                        update_global_with_equality(pipe_config, sesam_jwt, base_url)
+                    else:
+                        if element['config']['_id'] not in global_names_used and element['config']['_id'] not in mapping_list_of_globals:
+                            global_name = element['config']['_id']
+                            global_names_used.append(global_name)
+                            create_global_with_equality(element['config'], sesam_jwt, base_url)
 
-    ## Updating an existing global
-    if len(global_pipes_config) > 0:
-        for element in selected_globals:
-            for pipe_config in global_pipes_config:
-                if element['name'] == pipe_config['_id'] and element['name'] not in global_names_used:
-                    global_names_used.append(element['name'])
-                    for pipe, dataset in zip_longest(element['items'], pipe_config['source']['datasets']):
-                        if pipe == None:
-                            pass
-                        if pipe == None and dataset != None:
-                            pipe = {'name': 'Denmark'}
-                        if dataset != None and pipe['name'] == dataset.split(' ')[0]:
-                            datasets_used.append(pipe['name'])
-                            pipe_names.append(dataset)
-                            index = index + 1
-                        else:
-                            if pipe['name'] not in datasets_used and pipe['name'] != 'Denmark':
-                                pipe_names.append(f"{pipe['name']} pip{index}")
+        ## Creating a new global   
+        else:
+            for element in global_selection['globalGroups']:
+                global_name = element['config']['_id']
+                if global_name not in global_names_used:
+                    create_global_with_equality(element['config'], sesam_jwt, base_url)
+    else:
+        selected_globals = []
+        for element in global_selection['globalGroups']:
+            for key, value in element.items():
+                if key == "name":
+                    if "global-" not in value:
+                        pass
+                    else:
+                        selected_globals.append(element)
+
+        global_name = None
+        pipe_names = []
+        global_names_used = []
+        datasets_used = []
+        index = 1
+        mapping_list_of_globals = []
+        for pipe in global_pipes_config:
+            mapping_list_of_globals.append(pipe['_id'])
+
+        ## Updating an existing global
+        if len(global_pipes_config) > 0:
+            for element in selected_globals:
+                for pipe_config in global_pipes_config:
+                    if element['name'] == pipe_config['_id'] and element['name'] not in global_names_used:
+                        global_names_used.append(element['name'])
+                        for pipe, dataset in zip_longest(element['items'], pipe_config['source']['datasets']):
+                            if pipe == None:
+                                pass
+                            if pipe == None and dataset != None:
+                                pipe = {'name': 'Denmark'}
+                            if dataset != None and pipe['name'] == dataset.split(' ')[0]:
+                                datasets_used.append(pipe['name'])
+                                pipe_names.append(dataset)
                                 index = index + 1
-                    update_global(pipe_config, pipe_names, sesam_jwt, base_url)
-                    pipe_names = []
-                    index = 1
-
-                else:
-                    if element['name'] not in global_names_used and element['name'] not in mapping_list_of_globals:
-                        global_name = element['name']
-                        global_names_used.append(global_name)
-                        for pipe in element['items']:
-                            pipe_names.append(f"{pipe['name']} pip{index}")
-                            index = index + 1
-                        create_global(global_name, pipe_names, sesam_jwt, base_url)
+                            else:
+                                if pipe['name'] not in datasets_used and pipe['name'] != 'Denmark':
+                                    pipe_names.append(f"{pipe['name']} pip{index}")
+                                    index = index + 1
+                        update_global(pipe_config, pipe_names, sesam_jwt, base_url)
                         pipe_names = []
                         index = 1
 
-    ## Creating a new global   
-    else:
-        for element in selected_globals:
-            global_name = element['name']
-            if global_name not in global_names_used:
-                for pipe in element['items']:
-                    pipe_names.append(f"{pipe['name']} pip{index}")
-                    index = index + 1
-                create_global(global_name, pipe_names, sesam_jwt, base_url)
-                pipe_names = []
-                index = 1
+                    else:
+                        if element['name'] not in global_names_used and element['name'] not in mapping_list_of_globals:
+                            global_name = element['name']
+                            global_names_used.append(global_name)
+                            for pipe in element['items']:
+                                pipe_names.append(f"{pipe['name']} pip{index}")
+                                index = index + 1
+                            create_global(global_name, pipe_names, sesam_jwt, base_url)
+                            pipe_names = []
+                            index = 1
+
+        ## Creating a new global   
+        else:
+            for element in selected_globals:
+                global_name = element['name']
+                if global_name not in global_names_used:
+                    for pipe in element['items']:
+                        pipe_names.append(f"{pipe['name']} pip{index}")
+                        index = index + 1
+                    create_global(global_name, pipe_names, sesam_jwt, base_url)
+                    pipe_names = []
+                    index = 1
     
     global_pipes_config = []
 

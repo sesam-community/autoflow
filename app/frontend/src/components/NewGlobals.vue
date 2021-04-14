@@ -49,6 +49,7 @@
         </ul>
       </div>
       <button v-on:click.prevent="createGlobals">Merge into Globals</button>
+      <button v-on:click.prevent="modifyEqualities">Modify Equalities</button>
     </div>   
     <div v-if="isBufferActive" class="center" id="Buffer">
       <span v-html="bufferIcon()"></span>
@@ -61,25 +62,41 @@
       <br />
       <a href="https://portal.sesam.io/dashboard">Sesam Portal</a>
     </div>
+    <div>
+      <component
+        :groups="groups"
+        :configs_with_equalities="configs_with_equalities"
+        class="component"
+        v-if="isEqualities"
+        :is="nextComponent"
+      ></component>
+    </div>
   </body>
 </template>
   
   <script>
 import api from "../api";
+import Equalities from "./Equalities";
 export default {
   name: "Meta",
   data: () => {
     return {
       preSelection: true,
       isBufferActive: false,
+      isEqualities: false,
       isFinishedModelling: false,
       result: "{{result}}",
       groups: [],
+      configs_with_equalities: [],
       options: {
         dropzoneSelector: ".drag-inner-list",
         draggableSelector: ".drag-item",
       },
+      nextComponent: "Equalities",
     };
+  },
+  components: {
+    Equalities
   },
   props: ["selected_pipes"],
   async mounted() {
@@ -100,6 +117,10 @@ export default {
     bufferIcon() {
       return '<img src="https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif" alt="Loading GIF">';
     },
+    modifyEqualities() {
+      this.isEqualities = true;
+      this.preSelection = false;
+    }, 
     sesamResponse() {
       api.getResource("/sesam_response").then((data) => {
         if (data != null && data != "") {
@@ -108,6 +129,7 @@ export default {
           //eslint-disable-next-line no-console
           //console.log(data);
           this.groups = data["result"];
+          this.configs_with_equalities = data["pipe_configs_with_equalities"]
         }
       });
     },
@@ -122,6 +144,7 @@ export default {
     },
     async createGlobals() {
       let globalGroups = this.groups;
+      let isEquality = false;
       this.preSelection = false;
       this.isBufferActive = true;
       await fetch("http://localhost:5000/globals", {
@@ -132,6 +155,7 @@ export default {
         },
         body: JSON.stringify({
           globalGroups: globalGroups,
+          isEquality: isEquality,
         }),
       });
       this.globalResponse();

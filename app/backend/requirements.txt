@@ -1,0 +1,5 @@
+flask
+requests
+sesamutils
+urllib3
+Flask-Cors==3.0.9

@@ -27,6 +27,52 @@ def get_all_input_pipes(sesam_jwt, sesam_base_url):
 
     return pipe_names
 
+def create_global_with_equality(global_config, sesam_jwt, sesam_base_url):
+    return_msg = None
+    header = {
+        'Authorization': f'Bearer {sesam_jwt}',
+        "content-type": "application/json"
+    }
+
+    sesam_response = requests.post(f"{sesam_base_url}/pipes",
+                                headers=header,
+                                data=json.dumps([global_config]),
+                                verify=False)
+    
+    if not sesam_response.ok:
+        response = json.loads(sesam_response.content.decode('utf-8-sig'))
+        print(response)
+        
+    else:
+        print(f"Pipe '{global_config['_id']}' has been created")
+        return_msg = "Global created"
+
+    return return_msg
+
+def update_global_with_equality(global_config, sesam_jwt, sesam_base_url):
+    return_msg = None
+    header = {
+        'Authorization': f'Bearer {sesam_jwt}',
+        "content-type": "application/json"
+    }
+        
+    print(f"Trying to update config of {global_config['_id']}...")
+    
+    sesam_second_response = requests.put(f"{sesam_base_url}/pipes/{global_config['_id']}/config",
+                            headers=header,
+                            data=json.dumps(global_config),
+                            verify=False)
+    
+    if not sesam_second_response.ok:
+        print(sesam_second_response.content)
+        return_msg = "Global could not be updated"
+    
+    else:
+        print(f"Pipe '{global_config['_id']}' has been updated")
+        return_msg = "Global updated"
+    
+    return return_msg
+
 def create_global(global_name, selected_pipes, sesam_jwt, sesam_base_url):
     return_msg = None
     header = {
@@ -40,6 +86,7 @@ def create_global(global_name, selected_pipes, sesam_jwt, sesam_base_url):
         "source": {
             "type": "merge",
             "datasets": selected_pipes,
+            "equality": [],
             "identity": "first",
             "strategy": "default",
             "version": 2

@@ -11,11 +11,13 @@
   },
   "dependencies": {
     "axios": "^0.18.1",
+    "bootstrap-vue": "^2.21.2",
     "express": "^4.17.1",
     "package.json": "^2.0.1",
     "vue": "^2.6.12",
     "vue-cli": "^2.9.6",
     "vue-draggable": "^2.0.6",
+    "vue-json-pretty": "^1.7.1",
     "vue-router": "^3.4.9",
     "vuedraggable": "^2.24.3"
   },
