@@ -102,7 +102,7 @@ export default {
     },
     makeString(config) {
       const stringElement = JSON.stringify(config, null, "\t")
-      return `<textarea rows="20" cols="80" style="width: 60%;">${stringElement}</textarea><br />`
+      return `<textarea rows="20" cols="80" style="width: 60%;" readonly>${stringElement}</textarea><br />`
     },
     openCloseAll() {
       this.allClosed = !this.allClosed
